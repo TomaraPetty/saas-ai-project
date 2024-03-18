@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCoins } from '@fortawesome/free-solid-svg-icons';
 
 export const AppLayout = ({ children }) => {
   const { user, error, isLoading } = useUser();
@@ -9,7 +11,7 @@ export const AppLayout = ({ children }) => {
   return (
     <div className='grid grid-cols-[300px_1fr] h-screen max-h-screen'>
       <div className='flex flex-col text-white overflow-hidden'>
-        <div className='bg-slate-800'>
+        <div className='bg-slate-800 px-2'>
           <div>logo</div>
           <Link
             href='/post/new'
@@ -17,7 +19,10 @@ export const AppLayout = ({ children }) => {
           >
             New post
           </Link>
-          <Link href='/post/token-topup'>Tokens available</Link>
+          <Link href='/post/token-topup' className='block mt-2 text-center'>
+            <FontAwesomeIcon icon={faCoins} className='text-yellow-500' />
+            <span className='pl-1'>0 Tokens available</span>
+          </Link>
         </div>
         <div className='flex-1 overflow-auto bg-gradient-to-b from-slate-800 to-cyan-800'>
           list of posts
