@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     ],
   });
 
-  console.log(response.data.choices[0]?.message?.content);
-
-  res.status(200).json({ name: 'Generate post' });
+  res
+    .status(200)
+    .json({ postContent: response.data.choices[0]?.message?.content });
 }
