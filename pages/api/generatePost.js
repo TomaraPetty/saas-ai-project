@@ -7,8 +7,8 @@ export default async function handler(req, res) {
 
   const openai = new OpenAIApi(config);
 
-  const topic = 'dog ownership';
-  const keywords = 'first-time dog owner, puppy diet';
+  const { topic, keywords } = req.body;
+
   const response = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo-1106',
     messages: [
