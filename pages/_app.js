@@ -1,6 +1,6 @@
 import { UserProvider } from '@auth0/nextjs-auth0/client';
 import '../styles/globals.css';
-import { DM_Sans, DM_Serif_Display } from '@next/font/google';
+import { DM_Sans, DM_Serif_Display } from 'next/font/google';
 
 const dmSans = DM_Sans({
   weight: ['400', '500', '700'],
