@@ -1,7 +1,21 @@
-import { withApiAuthRequired } from '@auth0/nextjs-auth0';
+import { getSession, withApiAuthRequired } from '@auth0/nextjs-auth0';
 import { OpenAIApi, Configuration } from 'openai';
+import clientPromise from '../../lib/mongodb';
 
 export default withApiAuthRequired(async function handler(req, res) {
+  const { user } = await getSession(req, res);
+  const client = await clientPromise;
+  const db = client.db('BlogStandard');
+
+  const userProfile = await db.collection('users').findOne({
+    auth0Id: user.sub,
+  });
+
+  if (!userProfile?.availableTokens) {
+    res.status(403);
+    return;
+  }
+
   const config = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
   });
@@ -59,6 +73,27 @@ export default withApiAuthRequired(async function handler(req, res) {
 
   const { title, metaDescription } =
     seoResponse.data.choices[0]?.message?.content || {};
+
+  await db.collection('users').updateOne(
+    {
+      auth0Id: user.sub,
+    },
+    {
+      $inc: {
+        availableTokens: -1,
+      },
+    }
+  );
+
+  const post = await db.collection('posts').insertOne({
+    postContent,
+    title,
+    metaDescription,
+    topic,
+    keywords,
+    userId: userProfile._id,
+    created: new Date(),
+  });
 
   res.status(200).json({
     post: {
