@@ -1,5 +1,5 @@
 import { getSession, withApiAuthRequired } from '@auth0/nextjs-auth0';
-import { OpenAIApi, Configuration } from 'openai';
+import { Configuration, OpenAIApi } from 'openai';
 import clientPromise from '../../lib/mongodb';
 
 export default withApiAuthRequired(async function handler(req, res) {
@@ -8,7 +8,7 @@ export default withApiAuthRequired(async function handler(req, res) {
   const db = client.db('BlogStandard');
 
   const userProfile = await db.collection('users').findOne({
-    auth0Id: user.sub,
+    authOId: user.sub,
   });
 
   if (!userProfile?.availableTokens) {
@@ -19,34 +19,34 @@ export default withApiAuthRequired(async function handler(req, res) {
   const config = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
   });
-
   const openai = new OpenAIApi(config);
 
   const { topic, keywords } = req.body;
 
-  // const response = await openai.createChatCompletion({
-  //   model: 'gpt-3.5-turbo-1106',
-  //   messages: [
-  //     {
-  //       role: 'system',
-  //       content:
-  //         'You are an SEO friendly blog post generator called BlogStandard. You are designed to output markdown without frontmatter',
-  //     },
-  //     {
-  //       role: 'user',
-  //       content: `
-  //       Generate me a long and detailed seo friendly blog post on the following topic delimited by triple hyphens:
-  //       ---
-  //       ${topic}
-  //       ---
-  //       Targeting the following comma separated keywords delimited by triple hyphens:
-  //       ---
-  //       ${keywords}
-  //       ---
-  //       `,
-  //     },
-  //   ],
-  // });
+  if (!topic || !keywords) {
+    res.status(422);
+    return;
+  }
+
+  if (topic.length > 80 || keywords.length > 80) {
+    res.status(422);
+    return;
+  }
+
+  /*const response = await openai.createCompletion({
+    model: 'text-davinci-003',
+    temperature: 0,
+    max_tokens: 3600,
+    prompt: `Write a long and detailed SEO-friendly blog post about ${topic}, that targets the following comma-separated keywords: ${keywords}.
+    The content should be formatted in SEO-friendly HTML.
+    The response must also include appropriate HTML title and meta description content.
+    The return format must be stringified JSON in the following format:
+    {
+      "postContent": post content here
+      "title": title goes here
+      "metaDescription": meta description goes here
+    }`,
+  });*/
 
   const postContentResult = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
@@ -65,31 +65,7 @@ export default withApiAuthRequired(async function handler(req, res) {
     temperature: 0,
   });
 
-  const postContent = postContentResult.data.choices[0]?.message?.content;
-  // const seoResponse = await openai.createChatCompletion({
-  //   model: 'gpt-3.5-turbo-1106',
-  //   messages: [
-  //     {
-  //       role: 'system',
-  //       content:
-  //         'You are an SEO friendly blog post generator called BlogStandard. You are designed to output JSON. Do not include HTML tags in your output.',
-  //     },
-  //     {
-  //       role: 'user',
-  //       content: `Generate an SEO friendly title and SEO friendly meta description for the following blog post: ${postContent}
-  //       ---
-  //       The output json must be in the following format:
-  //       {
-  //         "title": "example title",
-  //         "metaDescription": "example meta description",
-  //       }`,
-  //     },
-  //   ],
-  //   response_format: { type: 'json_object' },
-  // });
-
-  // const { title, metaDescription } =
-  //   seoResponse.data.choices[0]?.message?.content || {};
+  const postContent = postContentResult.data.choices[0]?.message.content;
 
   const titleResult = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
@@ -150,20 +126,16 @@ export default withApiAuthRequired(async function handler(req, res) {
   console.log('TITLE: ', title);
   console.log('META DESCRIPTION: ', metaDescription);
 
-  console.log('POST CONTENT: ', postContent);
-  console.log('TITLE: ', title);
-  console.log('META DESCRIPTION: ', metaDescription);
-
-  // await db.collection('users').updateOne(
-  //   {
-  //     auth0Id: user.sub,
-  //   },
-  //   {
-  //     $inc: {
-  //       availableTokens: -1,
-  //     },
-  //   }
-  // );
+  await db.collection('users').updateOne(
+    {
+      auth0Id: user.sub,
+    },
+    {
+      $inc: {
+        availableTokens: -1,
+      },
+    }
+  );
 
   const post = await db.collection('posts').insertOne({
     postContent: postContent || '',
@@ -176,10 +148,12 @@ export default withApiAuthRequired(async function handler(req, res) {
   });
 
   res.status(200).json({
-    post: {
-      postContent,
-      title,
-      metaDescription,
-    },
+    postId: 'post id',
   });
 });
+
+// export const config = {
+//   api: {
+//     externalResolver: true,
+//   },
+// };

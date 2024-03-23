@@ -10,16 +10,18 @@ export default function NewPost(props) {
   console.log('new post props', props);
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await fetch(`/api/generatePost`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ topic, keywords }),
-    });
-    const json = await response.json();
-    console.log('RESULT:', json);
-    setPostContent(json.post.postContent);
+    try {
+      const response = await fetch(`/api/generatePost`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ topic, keywords }),
+      });
+      const json = await response.json();
+      console.log('RESULT:', json);
+      setPostContent(json.post.postContent);
+    } catch (error) {}
   };
 
   return (
