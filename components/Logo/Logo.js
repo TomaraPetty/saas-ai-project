@@ -7,7 +7,7 @@ export const Logo = () => {
       Make Noise
       <FontAwesomeIcon
         icon={faPhone}
-        className='pl-2 text-2xl text-slate-400 m-2'
+        className='pl-2 text-2xl text-slate-400'
       />
     </div>
   );
