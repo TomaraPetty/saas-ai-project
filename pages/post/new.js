@@ -1,15 +1,21 @@
 import { withPageAuthRequired } from '@auth0/nextjs-auth0';
 import { AppLayout } from '../../components/AppLayout';
 import { useState } from 'react';
-import Markdown from 'react-markdown';
+import { useRouter } from 'next/router';
+import { getAppProps } from '../../utils/getAppProps';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBrain } from '@fortawesome/free-solid-svg-icons';
 
-export default function NewPost(props) {
-  const [postContent, setPostContent] = useState('');
+export default function NewPost() {
   const [topic, setTopic] = useState('');
   const [keywords, setKeywords] = useState('');
-  console.log('new post props', props);
+  const [generating, setGenerating] = useState(false);
+
+  const router = useRouter();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setGenerating(true);
     try {
       const response = await fetch(`/api/generatePost`, {
         method: 'POST',
@@ -20,38 +26,64 @@ export default function NewPost(props) {
       });
       const json = await response.json();
       console.log('RESULT:', json);
-      setPostContent(json.post.postContent);
-    } catch (error) {}
+      if (json?.postId) {
+        router.push(`/post/${json.postId}`);
+      }
+    } catch (error) {
+      setGenerating(false);
+    }
   };
 
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>
-            <strong>Generate a blog post on the topic of:</strong>
-          </label>
-          <textarea
-            className='resize-none border border-slate-500 w-full block my-2 px-4 py-2 rounded-sm'
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-          ></textarea>
+    <div className='h-full overflow-hidden'>
+      {generating && (
+        <div className='text-green-500 flex h-full animate-pulse w-full flex-col justify-center items-center'>
+          <FontAwesomeIcon
+            icon={faBrain}
+            className='text-8xl'
+          ></FontAwesomeIcon>
+          <h6>Generating...</h6>
         </div>
-        <div>
-          <label>
-            <strong>Targeting the following keywords:</strong>
-          </label>
-          <textarea
-            className='resize-none border border-slate-500 w-full block my-2 px-4 py-2 rounded-sm'
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-          ></textarea>
+      )}
+      {!generating && (
+        <div className='w-full h-full flex flex-col overflow-auto'>
+          <form
+            onSubmit={handleSubmit}
+            className='m-auto w-full max-w-screen-sm bg-slate-100 p-4 rounded-md shadow-xl border border-slate-200 shadow-slate-200'
+          >
+            <div>
+              <label>
+                <strong>Generate a blog post on the topic of:</strong>
+              </label>
+              <textarea
+                className='resize-none border border-slate-500 w-full block my-2 px-4 py-2 rounded-md'
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              ></textarea>
+            </div>
+            <div>
+              <label>
+                <strong>Targeting the following keywords:</strong>
+              </label>
+              <textarea
+                className='resize-none border border-slate-500 w-full block my-2 px-4 py-2 rounded-md'
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+              ></textarea>
+              <small className='block mb-2'>
+                Separate keywords with a comma
+              </small>
+            </div>
+            <button
+              className='btn'
+              type='submit'
+              disabled={!topic.trim() || !keywords.trim()}
+            >
+              Generate
+            </button>
+          </form>
         </div>
-        <button className='btn' type='submit'>
-          Generate
-        </button>
-      </form>
-      <Markdown>{postContent}</Markdown>
+      )}
     </div>
   );
 }
@@ -60,8 +92,17 @@ NewPost.getLayout = function getLayout(page, pageProps) {
   return <AppLayout {...pageProps}>{page}</AppLayout>;
 };
 
-export const getServerSideProps = withPageAuthRequired(() => {
-  return {
-    props: { test: 'this is a test' },
-  };
+export const getServerSideProps = withPageAuthRequired({
+  async getServerSideProps(ctx) {
+    const props = await getAppProps(ctx);
+    if (!props.availableTokens) {
+      return {
+        redirect: {
+          destination: '/token-topup',
+          permanent: false,
+        },
+      };
+    }
+    return { props };
+  },
 });
